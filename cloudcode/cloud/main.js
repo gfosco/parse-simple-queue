@@ -47,7 +47,7 @@ Parse.Cloud.afterSave('TestObject', function(request) {
 });
 
 
-// This background job is scheduled, or run ad-hoc, and processes outstanding tasks.
+// This background job is run ad-hoc/scheduled, and processes outstanding tasks.
 Parse.Cloud.job('simpleWorkQueue', function(request, status) {
   Parse.Cloud.useMasterKey();
   // Query for simple tasks which haven't been processed
@@ -57,16 +57,19 @@ Parse.Cloud.job('simpleWorkQueue', function(request, status) {
   query.include('taskObjects');
   var processed = 0;
   query.each(function(task) {
-    // This block will return a promise which is manually resolved to prevent errors from bubbling up.
+    // This block will return a promise which is manually resolved to prevent
+    //   errors from bubbling up.
     var promise = new Parse.Promise();
     processed++;
     var params = task.get('taskParameters');
     var objects = task.get('taskObjects');
-    // The taskClaimed field is atomically incremented to ensure that it is processed only once.
+    // The taskClaimed field is atomically incremented to ensure that it is
+    //   processed only once.
     task.increment('taskClaimed');
     task.save().then(function(task) {
       var action = task.get('taskAction');
-      // invalid actions not defined by WorkActions are discarded and will not be processed again.
+      // invalid actions not defined by WorkActions are discarded and will not
+      //   be processed again.
       if (task.get('taskClaimed') == 1 && WorkActions[action]) {
         WorkActions[action](task, params, objects).then(function() {
           promise.resolve();
